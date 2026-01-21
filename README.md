@@ -29,7 +29,7 @@ void loop() {
 ```
 ## ADC Measurements
 ### Conversion Modes
-- **Auto-Scan Mode**: The ADC cycles through enabled channels automatically. Configure using `setChannelMode(MUXMODE_AUTO_SCAN)`, then enable channels via the MUX registers (e.g., write `MUXSG0/MUXSG1` for single-ended, or `MUXDIF` for differential).
+- **Auto-Scan Mode**: The ADC cycles through a pre-selectable list of channels automatically. Configure using `setChannelMode(MUXMODE_AUTO_SCAN)`, then enable channels via the MUX registers (e.g., write `MUXSG0/MUXSG1` for single-ended, or `MUXDIF` for differential).
 - **Fixed-Channel Mode**: The ADC repeatedly converts a single channel. Configure using `setChannelMode(MUXMODE_FIXED_CHANNEL)` and select the input in `REG_MUXSCH` (AINP on bits [7:4], AINN on bits [3:0]).
 
 Example:

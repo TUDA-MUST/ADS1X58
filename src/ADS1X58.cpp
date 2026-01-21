@@ -1,7 +1,7 @@
 #include "ADS1X58.h"
 
 /**
- * @brief Constructs an ADS1X58 ADC interface object.
+ * @brief Constructs an ADS1X58 ADC interface object with specified reference voltage.
  * 
  * Initializes the SPI communication settings, configures the chip select pin,
  * and sets the reference voltage for conversion calculations.
@@ -9,15 +9,46 @@
  * 
  * @param s Pointer to SPIClass instance for SPI communication
  * @param type ADC type (ADS1258 for 24-bit or ADS1158 for 16-bit)
- * @param cs Chip select pin number
+ * @param csPin Chip select pin number
  * @param vref Reference voltage in volts (used for voltage conversion). Can also be set later using setVref().
  * @param SPIclock SPI clock frequency in Hz (default: 4000000)
  */
-ADS1X58::ADS1X58(SPIClass *s, ADC_TYPE type, int cs, float vref, int SPIclock)
-    : _spi(s), csPin(cs), adcType(type), vref(vref), mySPISettings(SPIclock, MSBFIRST, SPI_MODE0)
+ADS1X58::ADS1X58(SPIClass *s, ADC_TYPE type, int csPin, float vref, int SPIclock)
+    : _spi(s), csPin(csPin), adcType(type), vref(vref), mySPISettings(SPIclock, MSBFIRST, SPI_MODE0)
 {
     pinMode(csPin, OUTPUT);
     digitalWrite(csPin, HIGH);
+}
+
+/**
+ * @brief Constructs an ADS1X58 ADC interface object and auto-measures reference voltage.
+ * 
+ * Initializes the SPI communication settings, configures the chip select pin,
+ * and automatically measures the internal reference voltage using measVref().
+ * The CS pin is set to OUTPUT mode and driven HIGH (inactive) by default.
+ * If the measurement fails, vref is set to 1.0V as a fallback.
+ * 
+ * @param s Pointer to SPIClass instance for SPI communication
+ * @param type ADC type (ADS1258 for 24-bit or ADS1158 for 16-bit)
+ * @param csPin Chip select pin number
+ * @param SPIclock SPI clock frequency in Hz (default: 4000000)
+ * 
+ * @note Requires a short delay after construction to allow ADC to stabilize before measurement
+ */
+ADS1X58::ADS1X58(SPIClass *s, ADC_TYPE type, int csPin, int SPIclock)
+    : _spi(s), csPin(csPin), adcType(type), vref(1.0f), mySPISettings(SPIclock, MSBFIRST, SPI_MODE0)
+{
+    pinMode(csPin, OUTPUT);
+    digitalWrite(csPin, HIGH);
+    
+    // Allow ADC to stabilize before measuring vref
+    delay(50);
+    
+    // Measure and set vref automatically
+    float measuredVref = measVref();
+    if (measuredVref != WRONG_FLOAT && measuredVref > 0.0f) {
+        vref = measuredVref;
+    }
 }
 
 /**
@@ -75,16 +106,16 @@ bool ADS1X58::_isNewData(ADS1X58_ChanData* chanData)
  * 
  * Performs a single register read operation via SPI using the CMD_REG_READ command.
  * 
- * @param reg Register address to read (use REG_* constants)
+ * @param regAddr Register address to read (use REG_* constants)
  * @return uint8_t The 8-bit value stored in the specified register
  */
-uint8_t ADS1X58::readRegister(uint8_t reg)
+uint8_t ADS1X58::readRegister(uint8_t regAddr)
 {
     _spi->beginTransaction(mySPISettings);
     digitalWrite(csPin, LOW);
     
     // Send read command with register address
-    _spi->transfer(CMD_REG_READ | reg);
+    _spi->transfer(CMD_REG_READ | regAddr);
     uint8_t value = _spi->transfer(0x00);
     
     digitalWrite(csPin, HIGH);
@@ -99,28 +130,28 @@ uint8_t ADS1X58::readRegister(uint8_t reg)
  * Uses the CMD_MUL_EN bit to enable multiple register access, reading consecutive
  * registers starting from the specified address.
  * 
- * @param startAddress Starting register address
- * @param buffer Pointer to buffer where register values will be stored
+ * @param startRegAddr Starting register address
+ * @param values Pointer to buffer where register values will be stored
  * @param count Number of consecutive registers to read
  * @return uint8_t* Pointer to the buffer containing the read values
  */
-uint8_t* ADS1X58::readRegistersMultiple(uint8_t startAddress, uint8_t* buffer, uint8_t count)
+uint8_t* ADS1X58::readRegistersMultiple(uint8_t startRegAddr, uint8_t* values, uint8_t count)
 {
     _spi->beginTransaction(mySPISettings);
     digitalWrite(csPin, LOW);
     
     // Send read command with MUL bit set for consecutive register access
-    _spi->transfer(CMD_REG_READ | CMD_MUL_EN | startAddress);
+    _spi->transfer(CMD_REG_READ | CMD_MUL_EN | startRegAddr);
     
     // Read all consecutive registers in one transaction
     for (uint8_t i = 0; i < count; i++) {
-        buffer[i] = _spi->transfer(0x00);
+        values[i] = _spi->transfer(0x00);
     }
     
     digitalWrite(csPin, HIGH);
     _spi->endTransaction();
     
-    return buffer;  // returns pointer to the buffer
+    return values;  // returns pointer to the buffer
 }
 
 /**
@@ -128,16 +159,16 @@ uint8_t* ADS1X58::readRegistersMultiple(uint8_t startAddress, uint8_t* buffer, u
  * 
  * Performs a single register write operation via SPI using the CMD_REG_WRITE command.
  * 
- * @param reg Register address to write (use REG_* constants)
+ * @param regAddr Register address to write (use REG_* constants)
  * @param val 8-bit value to write to the register
  */
-void ADS1X58::writeRegister(uint8_t regAddress, uint8_t val)
+void ADS1X58::writeRegister(uint8_t regAddr, uint8_t val)
 {
     _spi->beginTransaction(mySPISettings);
     digitalWrite(csPin, LOW);
     
     // Send write command with register address
-    _spi->transfer(CMD_REG_WRITE | regAddress);
+    _spi->transfer(CMD_REG_WRITE | regAddr);
     _spi->transfer(val);
     
     digitalWrite(csPin, HIGH);
@@ -150,17 +181,17 @@ void ADS1X58::writeRegister(uint8_t regAddress, uint8_t val)
  * Uses the CMD_MUL_EN bit to enable multiple register access, writing to consecutive
  * registers starting from the specified address.
  * 
- * @param startAddress Starting register address
+ * @param startRegAddr Starting register address
  * @param values Pointer to array of values to write
  * @param count Number of consecutive registers to write
  */
-void ADS1X58::writeRegistersMultiple(uint8_t startAddress, const uint8_t* values, uint8_t count)
+void ADS1X58::writeRegistersMultiple(uint8_t startRegAddr, const uint8_t* values, uint8_t count)
 {
     _spi->beginTransaction(mySPISettings);
     digitalWrite(csPin, LOW);
     
     // Send write command with MUL bit set for consecutive register access
-    _spi->transfer(CMD_REG_WRITE | CMD_MUL_EN | startAddress);
+    _spi->transfer(CMD_REG_WRITE | CMD_MUL_EN | startRegAddr);
     
     // Write all consecutive registers in one transaction
     for (uint8_t i = 0; i < count; i++) {
@@ -178,16 +209,16 @@ void ADS1X58::writeRegistersMultiple(uint8_t startAddress, const uint8_t* values
  * updates the masked bits with the new value, and writes the result back.
  * Pattern: new_value = (current & ~mask) | (val & mask)
  * 
- * @param regAddress Register address to update
+ * @param regAddr Register address to update
  * @param mask Bit mask indicating which bits to modify (1 = modify, 0 = preserve)
  * @param val New value for the masked bits (needs to be at corresponding positions)
  * @return uint8_t The previous register value before modification
  */
-uint8_t ADS1X58::updateRegister(uint8_t regAddress, uint8_t mask, uint8_t val)
+uint8_t ADS1X58::updateRegister(uint8_t regAddr, uint8_t mask, uint8_t val)
 {
-    uint8_t current = readRegister(regAddress);
+    uint8_t current = readRegister(regAddr);
     uint8_t updated = (current & ~mask) | (val & mask);
-    writeRegister(regAddress, updated);
+    writeRegister(regAddr, updated);
     return current;  // returns the previous register value
 }
 
@@ -329,7 +360,7 @@ void ADS1X58::setIdleMode(ADS1X58_IDLMOD setting)
  * 
  * @param setting Delay setting (DLY_0 for no delay, DLY_1 through DLY_48 for progressive delays)
  */
-void ADS1X58::setConversionDelay(ADS1X58_DLY setting)
+void ADS1X58::setDelay(ADS1X58_DLY setting)
 {
     updateRegister(REG_CONFIG1, MASK_CONFIG1_DLY, setting);
 }
@@ -476,9 +507,9 @@ float ADS1X58::codeToVoltage(int32_t code)
 {
     // then convert to voltage based on reference voltage and ADC type
     if (adcType == ADC_TYPE::ADS1258) {
-        return ((float) code / ADS1258_RANGE) * vref / _gain;
+        return ((float) code / (float)ADS1258_RANGE) * vref / _gain;
     } else {
-        return ((float) code / ADS1158_RANGE) * vref / _gain;
+        return ((float) code / (float)ADS1158_RANGE) * vref / _gain;
     }
 }
 
@@ -678,7 +709,7 @@ float ADS1X58::measVref()
  *                  Use ADS1X58_TEMP_COEFF_FREE (394) for free-air operation (unlikely)
  * @return float Temperature in degrees Celsius, or WRONG_FLOAT on failure
  */
-float ADS1X58::measTempC(float tempCoeff = ADS1X58_TEMP_COEFF_PCB)
+float ADS1X58::measTempC(float tempCoeff)
 {
     ADS1X58_ChanData chanData;
     _internalMeas(&chanData, SYSRED_TEMP, CHID_TEMP);

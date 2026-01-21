@@ -74,28 +74,28 @@ class ADS1X58
     public:
         /* CONFIG0 Register Settings */
         enum ADS1X58_SPIRST : uint8_t { // inactivity reset timer
-            SPIRST_LONG      = 0b00000000,  // 4096 fclk (default)
-            SPIRST_SHORT     = 0b01000000,
+            SPIRST_LONG      = 0b00000000,  // 4096fCLK -> 256us @16MHz (default)
+            SPIRST_SHORT     = 0b01000000, // 256fCLK -> 16us @16MHz
         };
         enum ADS1X58_MUXMODE : uint8_t { // Channel mode operation
             MUXMODE_AUTO_SCAN      = 0b00000000,  // auto-scan (default)
-            MUXMODE_FIXED_CHANNEL  = 0b00100000,
+            MUXMODE_FIXED_CHANNEL  = 0b00100000,  // fixed-channel
         };
         enum ADS1X58_BYPAS : uint8_t { // internal or external connection from MUX output to ADC input
             BYPAS_INTERNAL  = 0b00010000,  // internal MUX (default)
-            BYPAS_EXTERNAL  = 0b00000000,
+            BYPAS_EXTERNAL  = 0b00000000,  // external connection
         };
         enum ADS1X58_CLKENB : uint8_t { // enables clock output pin
             CLKENB_EN      = 0b00001000,  // enabled (default)
-            CLKENB_DIS     = 0b00000000,
+            CLKENB_DIS     = 0b00000000,  // disabled
         };
         enum ADS1X58_CHOP : uint8_t { // chopping enable
             CHOP_EN      = 0b00000100,  // enabled (default)
-            CHOP_DIS     = 0b00000000,
+            CHOP_DIS     = 0b00000000,  // disabled
         };
         enum ADS1X58_STAT : uint8_t { // status byte enable
             STAT_EN      = 0b00000010,  // enabled (default)
-            STAT_DIS     = 0b00000000,
+            STAT_DIS     = 0b00000000,  // disabled
         };
 
         /* CONFIG1 Register Settings */
@@ -103,26 +103,26 @@ class ADS1X58
             IDLMOD_SLEEP   = 0b10000000, // sleep mode (default)
             IDLMOD_STANDBY = 0b00000000, // standby mode
         };
-        enum ADS1X58_DLY : uint8_t { // time delay in 128/f_clk periods // f_clk most likely 16 MHz
+        enum ADS1X58_DLY : uint8_t { // time delay in number of 128/f_clk periods -> 8us @16MHz // important to settle external signal conditioning
             DLY_0        = 0b00000000, // off (default)
-            DLY_1        = 0b00010000,
-            DLY_2        = 0b00100000,
-            DLY_4        = 0b00110000,
-            DLY_8        = 0b01000000,
-            DLY_16       = 0b01010000,
-            DLY_32       = 0b01100000,
-            DLY_48       = 0b01110000,
+            DLY_1        = 0b00010000, // 8us
+            DLY_2        = 0b00100000, // 16us
+            DLY_4        = 0b00110000, // 32us
+            DLY_8        = 0b01000000, // 64us
+            DLY_16       = 0b01010000, // 128us
+            DLY_32       = 0b01100000, // 256us
+            DLY_48       = 0b01110000, // 384us
         };
         enum ADS1X58_SBCS : uint8_t { // sensor bias current source
             SBCS_OFF     = 0b00000000, // sensor bias current source off (default)
-            SBCS_SMALL   = 0b00000100, // 1.5 microAmps
-            SBCS_LARGE   = 0b00001100, // 24 microAmps
+            SBCS_SMALL   = 0b00000100, // 1.5 uA
+            SBCS_LARGE   = 0b00001100, // 24 uA
         };
         enum ADS1X58_DRATE : uint8_t { // total data rate in SPS: Auto-Scan Mode / Fixed-Channel Mode // assuming Chop = 0 and DLY[2:0] = 000
-            DRATE_00     = 0b00000000,  // 1831  / 1953
-            DRATE_01     = 0b00000001,  // 6168  / 7813
-            DRATE_10     = 0b00000010,  // 15123 / 31250
-            DRATE_11     = 0b00000011,  // 23739 / 125000 (default)
+            DRATE_00     = 0b00000000,  // 1831 (Auto-Scan) / 1953 (Fixed-Channel)
+            DRATE_01     = 0b00000001,  // 6168 (Auto-Scan) / 7813 (Fixed-Channel)
+            DRATE_10     = 0b00000010,  // 15123 (Auto-Scan) / 31250 (Fixed-Channel)
+            DRATE_11     = 0b00000011,  // 23739 (Auto-Scan) / 125000 (Fixed-Channel) (default)
         };
         
         /* GPIOC & GPIOD Register Settings */
@@ -149,16 +149,16 @@ class ADS1X58
         static constexpr uint8_t CMD_ADDRESS            {0b1111 << 0}; // enables multiple register access
 
         /* Register addresses */
-        static constexpr uint8_t REG_CONFIG0 {0x00};
-        static constexpr uint8_t REG_CONFIG1 {0x01};
-        static constexpr uint8_t REG_MUXSCH  {0x02}; // Fixed-Channel mode: input channel select
-        static constexpr uint8_t REG_MUXDIF  {0x03}; // Auto-Scan mode: differential input select
-        static constexpr uint8_t REG_MUXSG0  {0x04}; // Auto-Scan mode: single input select (AIN7-AIN0)
-        static constexpr uint8_t REG_MUXSG1  {0x05}; // Auto-Scan mode: single input select (AIN15-AIN8)
-        static constexpr uint8_t REG_SYSRED  {0x06}; // System Readings (Vref, Gain, Temp, Vcc Offset)
-        static constexpr uint8_t REG_GPIOC   {0x07}; // GPIO: configure as output (0) or input (1)
-        static constexpr uint8_t REG_GPIOD   {0x08}; // GPIO: read or write to pins
-		static constexpr uint8_t REG_ID      {0x09}; // Factory ID + ADS1258 / ADS1158
+        static constexpr uint8_t REG_CONFIG0 {0x00}; // 0x0A by default
+        static constexpr uint8_t REG_CONFIG1 {0x01}; // 0x83 by default
+        static constexpr uint8_t REG_MUXSCH  {0x02}; // Fixed-Channel mode: input channel select // 0x00 by default
+        static constexpr uint8_t REG_MUXDIF  {0x03}; // Auto-Scan mode: differential input select // 0x00 by default
+        static constexpr uint8_t REG_MUXSG0  {0x04}; // Auto-Scan mode: single input select (AIN7-AIN0) // 0xFF by default
+        static constexpr uint8_t REG_MUXSG1  {0x05}; // Auto-Scan mode: single input select (AIN15-AIN8) // 0xFF by default
+        static constexpr uint8_t REG_SYSRED  {0x06}; // System Readings (Vref, Gain, Temp, Vcc Offset) // 0x00 by default
+        static constexpr uint8_t REG_GPIOC   {0x07}; // GPIO: configure as output (0) or input (1) // 0xFF by default
+        static constexpr uint8_t REG_GPIOD   {0x08}; // GPIO: read or write to pins // 0x00 by default
+		static constexpr uint8_t REG_ID      {0x09}; // Factory ID + ADS1258 / ADS1158 // Bit 4: 1 for ADS1158, 0 for ADS1258
 
         /* Register masks */
         static constexpr uint8_t MASK_CONFIG0_SPIRST   {1 << 6};
@@ -228,8 +228,8 @@ class ADS1X58
         static constexpr uint8_t CHID_REF     {0x1D};
 
         /* Output Codes */
-        static constexpr float ADS1258_RANGE  {0x780000}; // 24 bit code for +Vref
-        static constexpr float ADS1158_RANGE  {0x7800}; // 16 bit code for +Vref
+        static constexpr int32_t ADS1258_RANGE  {0x780000}; // 24 bit code for +Vref
+        static constexpr int32_t ADS1158_RANGE  {0x7800}; // 16 bit code for +Vref
     
         static constexpr float ADS1X58_TEMP_COEFF_PCB {563.0f}; // temp coefficient if ADC is on PCB
         static constexpr float ADS1X58_TEMP_COEFF_FREE {394.0f}; // temp coefficient if ADC is in free air
@@ -238,19 +238,26 @@ class ADS1X58
         static constexpr uint32_t TIMEOUT_MS = 1000; // timeout for waiting new data in ms
         static constexpr float WRONG_FLOAT = -99999.0f; // default wrong float value if something fails
 
+
+        /////////////// FUNCTIONS ///////////////
+
+        /* Constructors */
         explicit ADS1X58(SPIClass *s, ADC_TYPE type, int csPin, float vref, int SPIclock=4000000);
+        explicit ADS1X58(SPIClass *s, ADC_TYPE type, int csPin, int SPIclock=4000000); // automatically measures vref
 
-		uint8_t readRegister(uint8_t reg);
-        uint8_t* readRegistersMultiple(uint8_t startReg, uint8_t* buffer, uint8_t count);
+        /* Basic Register Manipulation */
+		uint8_t readRegister(uint8_t regAddr);
+        uint8_t* readRegistersMultiple(uint8_t startRegAddr, uint8_t* values, uint8_t count);
 
-        void writeRegister(uint8_t reg, uint8_t val);
-        void writeRegistersMultiple(uint8_t startReg, const uint8_t* values, uint8_t count);
-        uint8_t updateRegister(uint8_t reg, uint8_t mask, uint8_t val);
+        void writeRegister(uint8_t regAddr, uint8_t val);
+        void writeRegistersMultiple(uint8_t startRegAddr, const uint8_t* values, uint8_t count);
+        uint8_t updateRegister(uint8_t regAddr, uint8_t mask, uint8_t val);
 
-        void enableAllSingleEndedInputs();
+        /* Data Reading and Measuring*/
         void readChannelDataDirect(ADS1X58_ChanData* chanData);
         void readChannelDataCommand(ADS1X58_ChanData* chanData);
         bool waitForReadChannelDataCommand(ADS1X58_ChanData* chanData);
+        void startPulseConversion();
 
         float codeToVoltage(int32_t code);
         float readVoltage();
@@ -261,7 +268,8 @@ class ADS1X58
         float measVref();
         float measTempC(float tempCoeff = ADS1X58_TEMP_COEFF_PCB);
 
-        void compensateGain(int newGain);
+        /* Configuration and Control */
+        void compensateGain(int newGain); // used for gain error compensation // see measGain()
         void setVref(float newVref);
         void setInactivityResetTimer(ADS1X58_SPIRST setting);
         void setChannelMode(ADS1X58_MUXMODE setting);
@@ -270,14 +278,17 @@ class ADS1X58
         void setChopMode(ADS1X58_CHOP setting);
         void setStatusByte(ADS1X58_STAT setting);
         void setIdleMode(ADS1X58_IDLMOD setting);
-        void setConversionDelay(ADS1X58_DLY setting);
+        void setDelay(ADS1X58_DLY setting);
         void setSensorBiasCurrent(ADS1X58_SBCS setting);
         void setDataRate(ADS1X58_DRATE setting);
+
         void setSingleEndedChannel(uint8_t channel, bool state);
+        void enableAllSingleEndedInputs();
         void setDifferentialChannel(uint8_t diffPair, bool state);
         void setFixedChannel(uint8_t AINP, uint8_t AINN, bool state);
-        void startPulseConversion();
+
         const char* chidToName(uint8_t chid);
+
         void GPIOpinMode(uint8_t pin, ADS1X58_GPIO_MODE mode);
         void GPIOdigitalWrite(uint8_t pin, ADS1X58_GPIO_STATE state);
         bool GPIOdigitalRead(uint8_t pin);
@@ -285,9 +296,9 @@ class ADS1X58
     private:
         SPIClass *_spi;
         SPISettings mySPISettings;
-        ADC_TYPE adcType;
-        int csPin;
-        float vref;
+        ADC_TYPE adcType; // determines 16-bit or 24-bit operation // see ADC_TYPE enum
+        int csPin; // chip select pin number
+        float vref; // reference voltage in volts
         float _gain = 1.0f; // enables gain error compensation using the external reference
         bool statusByteEnabled = true; // whether status byte is enabled in CONFIG0 register
 
