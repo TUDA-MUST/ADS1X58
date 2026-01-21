@@ -56,12 +56,12 @@ Each register's settings are mapped to specific bit positions. Consult comments 
 
 ### Register Access Pattern
 All register operations follow this sequence:
-1. Pull CS low
-2. Begin SPI transaction (establishes clock settings)
+1. Begin SPI transaction (establishes clock settings)
+2. Pull CS low
 3. Transfer command byte + operand byte(s)
 4. Receive response byte(s)
-5. End transaction
-6. Pull CS high
+5. Pull CS high
+6. End transaction
 
 The `readRegister()`, `writeRegister()`, and `updateRegister()` methods encapsulate this pattern.
 
