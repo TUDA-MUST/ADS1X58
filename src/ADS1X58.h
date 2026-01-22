@@ -261,6 +261,7 @@ class ADS1X58
 
         float codeToVoltage(int32_t code);
         float readVoltage();
+        float readVoltageDirect(); // same but uses readChannelDataDirect
 
         float measOffset();
         float measVcc();
@@ -283,9 +284,11 @@ class ADS1X58
         void setDataRate(ADS1X58_DRATE setting);
 
         void setSingleEndedChannel(uint8_t channel, bool state);
-        void enableAllSingleEndedInputs();
         void setDifferentialChannel(uint8_t diffPair, bool state);
         void setFixedChannel(uint8_t AINP, uint8_t AINN, bool state);
+
+        void enableAllSingleEndedInputs();
+        void ADS1X58::disableAllChannels();
 
         const char* chidToName(uint8_t chid);
 
@@ -311,7 +314,7 @@ class ADS1X58
         };
 
         void _readDataBytesToResult(ADS1X58_ChanData* chanData);
-        void _internalMeas(ADS1X58_ChanData* chanData, uint8_t sysredBitMask, uint8_t checkChid);
+        void _internalMeas(ADS1X58_ChanData* chanData, uint8_t sysredBitMask, uint8_t checkChid=0xFF);
         bool _isNewData(ADS1X58_ChanData* chanData);
         float _internalCodeConversion(int32_t code, INTERNAL_TYPE_CONV measType);
 };

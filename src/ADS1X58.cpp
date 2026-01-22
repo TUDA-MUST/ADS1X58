@@ -556,7 +556,7 @@ float ADS1X58::readVoltageDirect() {
  * @note Disables chopping and enables status byte during measurement
  * @note Validates CHID is in range 0x18-0x1D (system measurement channels)
  */
-void ADS1X58::_internalMeas(ADS1X58_ChanData* chanData, uint8_t sysredBitMask, uint8_t checkChid=0xFF)
+void ADS1X58::_internalMeas(ADS1X58_ChanData* chanData, uint8_t sysredBitMask, uint8_t checkChid)
 {
     // Save current register values
     uint8_t savedRegs[5];
@@ -583,10 +583,10 @@ void ADS1X58::_internalMeas(ADS1X58_ChanData* chanData, uint8_t sysredBitMask, u
     writeRegistersMultiple(REG_MUXSCH, savedRegs, 5);
     
     // Validate CHID (bits [4:0]) is within 0x18–0x1D; otherwise mark as failed
-    if (chanData.rawStatus != 0xFF) {
-        uint8_t chid = chanData.rawStatus & STATUS_CHID;
-        if (chid < 0x18 || chid > 0x1D) chanData.success = false; // invalid CHID
-        if (checkChid != 0xFF && chid != checkChid) chanData.success = false; // CHID does not match expected
+    if (chanData->rawStatus != 0xFF) {
+        uint8_t chid = chanData->rawStatus & STATUS_CHID;
+        if (chid < 0x18 || chid > 0x1D) chanData->success = false; // invalid CHID
+        if (checkChid != 0xFF && chid != checkChid) chanData->success = false; // CHID does not match expected
     }
 }
 
@@ -635,7 +635,7 @@ float ADS1X58::_internalCodeConversion(int32_t code, INTERNAL_TYPE_CONV measType
 float ADS1X58::measOffset()
 {
     ADS1X58_ChanData chanData;
-    _internalMeas(&chanData, SYSRED_OFFSET, CHID_OFFSET);
+    _internalMeas(&chanData, MASK_SYSRED_OFFSET, CHID_OFFSET);
     if (!chanData.success) return WRONG_FLOAT; // measurement failed
     return codeToVoltage(chanData.rawData);
 }
@@ -650,7 +650,7 @@ float ADS1X58::measOffset()
 float ADS1X58::measVcc()
 {
     ADS1X58_ChanData chanData;
-    _internalMeas(&chanData, SYSRED_VCC, CHID_VCC);
+    _internalMeas(&chanData, MASK_SYSRED_VCC, CHID_VCC);
     if (!chanData.success) return WRONG_FLOAT; // measurement failed
     return _internalCodeConversion(chanData.rawData, INTERNAL_TYPE_CONV::VCC);
 }
@@ -665,7 +665,7 @@ float ADS1X58::measVcc()
 float ADS1X58::measGain()
 {
     ADS1X58_ChanData chanData;
-    _internalMeas(&chanData, SYSRED_GAIN, CHID_GAIN);
+    _internalMeas(&chanData, MASK_SYSRED_GAIN, CHID_GAIN);
     if (!chanData.success) return WRONG_FLOAT; // measurement failed
     return _internalCodeConversion(chanData.rawData, INTERNAL_TYPE_CONV::GAIN);
 }
@@ -680,7 +680,7 @@ float ADS1X58::measGain()
  */
 void ADS1X58::compensateGain(int newGain)
 {  
-    if (newGain == 0 || newGain < 0) return;
+    if (newGain <= 0) return;
     _gain = static_cast<float>(newGain);
 }
 
@@ -694,7 +694,7 @@ void ADS1X58::compensateGain(int newGain)
 float ADS1X58::measVref()
 {
     ADS1X58_ChanData chanData;
-    _internalMeas(&chanData, SYSRED_REF, CHID_REF);
+    _internalMeas(&chanData, MASK_SYSRED_REF, CHID_REF);
     if (!chanData.success) return WRONG_FLOAT; // measurement failed
     return _internalCodeConversion(chanData.rawData, INTERNAL_TYPE_CONV::VREF);
 }
@@ -712,7 +712,7 @@ float ADS1X58::measVref()
 float ADS1X58::measTempC(float tempCoeff)
 {
     ADS1X58_ChanData chanData;
-    _internalMeas(&chanData, SYSRED_TEMP, CHID_TEMP);
+    _internalMeas(&chanData, MASK_SYSRED_TEMP, CHID_TEMP);
     if (!chanData.success) return WRONG_FLOAT; // measurement failed
     float tempMicroVolts = codeToVoltage(chanData.rawData) / 1e6f; // convert to microVolts;
     return (tempMicroVolts - 168.0f) / tempCoeff + 25.0f; // per datasheet
