@@ -230,13 +230,13 @@ class ADS1X58
         /* Output Codes */
         static constexpr int32_t ADS1258_RANGE  {0x780000}; // 24 bit code for +Vref
         static constexpr int32_t ADS1158_RANGE  {0x7800}; // 16 bit code for +Vref
-    
-        static constexpr float ADS1X58_TEMP_COEFF_PCB {563.0f}; // temp coefficient if ADC is on PCB
-        static constexpr float ADS1X58_TEMP_COEFF_FREE {394.0f}; // temp coefficient if ADC is in free air
 
         /* Other */
         static constexpr uint32_t TIMEOUT_MS = 1000; // timeout for waiting new data in ms
         static constexpr float WRONG_FLOAT = -99999.0f; // default wrong float value if something fails
+
+        static constexpr float ADS1X58_TEMP_COEFF_PCB {563.0f}; // temp coefficient if ADC is on PCB
+        static constexpr float ADS1X58_TEMP_COEFF_FREE {394.0f}; // temp coefficient if ADC is in free air
 
 
         /////////////// FUNCTIONS ///////////////
@@ -298,8 +298,8 @@ class ADS1X58
         SPISettings mySPISettings;
         ADC_TYPE adcType; // determines 16-bit or 24-bit operation // see ADC_TYPE enum
         int csPin; // chip select pin number
-        float vref; // reference voltage in volts
-        float _gain = 1.0f; // enables gain error compensation using the external reference
+        float vref; // reference voltage in volts. Is used to convert code to voltage
+        float _gain = 1.0f; // enables gain error compensation, see compensateGain() and measGain()
         bool statusByteEnabled = true; // whether status byte is enabled in CONFIG0 register
 
         enum class INTERNAL_TYPE_CONV { // just used internally to quickly select conversion type
