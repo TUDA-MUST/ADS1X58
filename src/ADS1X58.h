@@ -288,7 +288,7 @@ class ADS1X58
         void setFixedChannel(uint8_t AINP, uint8_t AINN, bool state);
 
         void enableAllSingleEndedInputs();
-        void ADS1X58::disableAllChannels();
+        void disableAllChannels();
 
         const char* chidToName(uint8_t chid);
 
