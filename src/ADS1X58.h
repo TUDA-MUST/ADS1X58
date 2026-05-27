@@ -82,8 +82,8 @@ class ADS1X58
             MUXMODE_FIXED_CHANNEL  = 0b00100000,  // fixed-channel
         };
         enum ADS1X58_BYPAS : uint8_t { // internal or external connection from MUX output to ADC input
-            BYPAS_INTERNAL  = 0b00010000,  // internal MUX (default)
-            BYPAS_EXTERNAL  = 0b00000000,  // external connection
+            BYPAS_INTERNAL  = 0b00000000,  // internal MUX (default)
+            BYPAS_EXTERNAL  = 0b00010000,  // external connection
         };
         enum ADS1X58_CLKENB : uint8_t { // enables clock output pin
             CLKENB_EN      = 0b00001000,  // enabled (default)
