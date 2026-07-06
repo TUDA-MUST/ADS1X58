@@ -33,6 +33,8 @@ bin/
 .vscode/launch.json
 .vscode/ipch
 .idea/
+.github/
+.github/copilot-instructions.mde
 *.sublime-project
 *.sublime-workspace
 *.code-workspace
